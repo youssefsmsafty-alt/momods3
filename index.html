@@ -1,0 +1,901 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Mo Mods | Seiko Mod Boutique Egypt</title>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;0,600;1,300;1,400&family=Inter:wght@200;300;400;500&display=swap" rel="stylesheet">
+    <script src="https://elfsightcdn.com/platform.js" async></script>
+
+    <style>
+        :root {
+            --gold: #c5a059;
+            --gold-light: #e2c37a;
+            --dark: #050505;
+            --ink: #0c0c0c;
+            --lume: #00ffcc;
+            --card-bg: rgba(255,255,255,0.025);
+            --surface: #0f0f0f;
+        }
+
+        *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
+        html { scroll-behavior: smooth; }
+        body {
+            background: var(--dark); color: white;
+            font-family: 'Inter', sans-serif; overflow-x: hidden;
+        }
+        /* ═══════════════════════════════════════
+           SCROLL-DRIVEN FRAME SEQUENCE INTRO
+           A 151-frame image sequence (extracted from
+           source video at 30fps) is scrubbed frame-by-
+           frame as the user scrolls through a tall
+           wrapper. The canvas stays pinned (sticky) and
+           fills the viewport the entire time.
+        ═══════════════════════════════════════ */
+        .frame-scrub {
+            position: relative;
+            height: 400vh; /* scroll distance that drives the scrub */
+            background: #000;
+        }
+        .frame-scrub-sticky {
+            position: sticky; top: 0; left: 0;
+            width: 100%; height: 100vh;
+            overflow: hidden; background: #000;
+        }
+        #scrubCanvas {
+            position: absolute; inset: 0;
+            width: 100%; height: 100%;
+            display: block;
+        }
+        .scrub-vignette {
+            position: absolute; inset: 0; z-index: 5; pointer-events: none;
+            background: radial-gradient(ellipse at 50% 55%, transparent 35%, rgba(0,0,0,0.85) 100%);
+        }
+        .scrub-grain {
+            position: absolute; inset: 0; z-index: 4; pointer-events: none; opacity: 0.04;
+            background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+            animation: grainShift 0.07s steps(1) infinite;
+        }
+        @keyframes grainShift {
+            0%  { transform: translate(0,0) scale(1.02); }
+            25% { transform: translate(-3px,1px) scale(1); }
+            50% { transform: translate(2px,-2px) scale(1.01); }
+            75% { transform: translate(1px,3px) scale(1); }
+        }
+        .scrub-hud {
+            position: absolute; inset: 0; z-index: 6; pointer-events: none;
+            opacity: 0; transition: opacity 0.5s ease;
+        }
+        .scrub-hud.on { opacity: 1; }
+        .hud-corner { position: absolute; width: 28px; height: 28px; }
+        .hud-corner.tl { top: 14vh; left: 32px; border-top: 1px solid rgba(197,160,89,0.5); border-left: 1px solid rgba(197,160,89,0.5); }
+        .hud-corner.tr { top: 14vh; right: 32px; border-top: 1px solid rgba(197,160,89,0.5); border-right: 1px solid rgba(197,160,89,0.5); }
+        .hud-corner.bl { bottom: 14vh; left: 32px; border-bottom: 1px solid rgba(197,160,89,0.5); border-left: 1px solid rgba(197,160,89,0.5); }
+        .hud-corner.br { bottom: 14vh; right: 32px; border-bottom: 1px solid rgba(197,160,89,0.5); border-right: 1px solid rgba(197,160,89,0.5); }
+        .scrub-stamp {
+            position: absolute; top: calc(12vh + 20px); left: 48px; z-index: 7;
+            font-size: 0.5rem; letter-spacing: 5px; color: rgba(255,255,255,0.18);
+            text-transform: uppercase;
+        }
+        .scrub-stamp-r {
+            position: absolute; top: calc(12vh + 20px); right: 48px; z-index: 7;
+            font-size: 0.5rem; letter-spacing: 5px; color: rgba(255,255,255,0.18);
+            text-transform: uppercase; text-align: right;
+        }
+        .scrub-titles {
+            position: absolute; inset: 0; z-index: 7;
+            display: flex; flex-direction: column; align-items: center; justify-content: center;
+            text-align: center; pointer-events: none;
+            opacity: 0; transition: opacity 0.15s linear;
+        }
+        .scrub-eyebrow {
+            font-size: clamp(0.45rem, 1.2vw, 0.6rem); letter-spacing: 10px;
+            text-transform: uppercase; color: rgba(197,160,89,0.85); margin-bottom: 24px;
+        }
+        .scrub-logo {
+            font-family: 'Cormorant Garamond', serif;
+            font-size: clamp(3rem, 11vw, 7.5rem); font-weight: 300;
+            letter-spacing: 22px; text-transform: uppercase; color: white; line-height: 0.88;
+        }
+        .scrub-rule { width: 110px; height: 1px; background: var(--gold); margin: 26px auto 0; }
+        .scrub-subtitle {
+            font-size: clamp(0.45rem, 1.2vw, 0.58rem); letter-spacing: 8px;
+            text-transform: uppercase; color: rgba(255,255,255,0.32); margin-top: 22px;
+        }
+        .scrub-progress {
+            position: absolute; bottom: 40px; left: 50%; transform: translateX(-50%);
+            display: flex; flex-direction: column; align-items: center; gap: 10px;
+            z-index: 7; opacity: 0; transition: opacity 0.4s ease;
+        }
+        .scrub-progress.on { opacity: 1; }
+        .scrub-progress span { font-size: 0.6rem; letter-spacing: 4px; color: rgba(255,255,255,0.4); text-transform: uppercase; }
+        .scrub-progress-track { width: 1px; height: 50px; background: rgba(255,255,255,0.15); position: relative; overflow: hidden; }
+        .scrub-progress-fill { position: absolute; top: 0; left: 0; width: 100%; background: var(--gold); height: 0%; transition: height 0.05s linear; }
+
+        /* ═══════════════════════════════════════
+           NAVIGATION
+        ═══════════════════════════════════════ */
+        nav {
+            position: fixed; top: 0; width: 100%;
+            display: flex; justify-content: space-between; align-items: center;
+            padding: 32px 8%; z-index: 1000; transition: all 0.6s cubic-bezier(0.4,0,0.2,1);
+        }
+        nav.scrolled {
+            background: rgba(5,5,5,0.92); padding: 18px 8%;
+            border-bottom: 1px solid rgba(197,160,89,0.2); backdrop-filter: blur(20px);
+        }
+        .logo {
+            font-family: 'Cormorant Garamond', serif;
+            font-size: 1.6rem; color: var(--gold); letter-spacing: 6px; text-decoration: none; font-weight: 300;
+        }
+        .nav-links a {
+            text-decoration: none; color: rgba(255,255,255,0.7); text-transform: uppercase;
+            font-size: 0.68rem; letter-spacing: 3px; margin-left: 36px;
+            transition: color 0.3s; font-weight: 400; position: relative;
+        }
+        .nav-links a::after {
+            content: ''; position: absolute; bottom: -4px; left: 0; width: 0; height: 1px;
+            background: var(--gold); transition: width 0.3s;
+        }
+        .nav-links a:hover { color: var(--gold); }
+        .nav-links a:hover::after { width: 100%; }
+
+        /* ═══════════════════════════════════════
+           HERO
+        ═══════════════════════════════════════ */
+        .hero {
+            height: 100vh; width: 100%; position: relative; overflow: hidden;
+            display: flex; flex-direction: column; justify-content: center; align-items: center; text-align: center;
+        }
+        .hero-bg {
+            position: absolute; inset: 0;
+            background: url('https://images.unsplash.com/photo-1614164185128-e4ec99c436d7?auto=format&fit=crop&q=100') center/cover no-repeat;
+            transform: scale(1.08); animation: heroPan 20s ease-in-out infinite alternate;
+            filter: brightness(0.32);
+        }
+        @keyframes heroPan { from { transform: scale(1.08) translateX(0); } to { transform: scale(1.12) translateX(-2%); } }
+
+        .hero-ring {
+            position: absolute; width: 500px; height: 500px;
+            border: 1px solid rgba(197,160,89,0.15); border-radius: 50%;
+            animation: ringRotate 25s linear infinite; pointer-events: none;
+        }
+        .hero-ring::before {
+            content: ''; position: absolute; inset: 20px;
+            border: 1px solid rgba(197,160,89,0.08); border-radius: 50%;
+            animation: ringRotate 18s linear infinite reverse;
+        }
+        .hero-ring::after {
+            content: ''; position: absolute; inset: 50px;
+            border: 1px solid rgba(0,255,204,0.06); border-radius: 50%;
+            animation: ringRotate 12s linear infinite;
+        }
+        @keyframes ringRotate { from { transform: rotateX(70deg) rotateZ(0); } to { transform: rotateX(70deg) rotateZ(360deg); } }
+
+        .lume-particles { position: absolute; inset: 0; pointer-events: none; }
+        .lume-dot {
+            position: absolute; width: 2px; height: 2px; background: var(--lume);
+            border-radius: 50%; box-shadow: 0 0 6px var(--lume);
+            animation: lumePulse var(--d, 4s) ease-in-out infinite alternate;
+        }
+        @keyframes lumePulse { from { opacity: 0.2; transform: translateY(0); } to { opacity: 0.9; transform: translateY(-12px); } }
+
+        .hero-content { position: relative; z-index: 2; }
+        .hero-eyebrow {
+            font-size: 0.65rem; letter-spacing: 8px; text-transform: uppercase;
+            color: var(--gold); margin-bottom: 28px; opacity: 0;
+            animation: fadeUp 1s ease 0.3s forwards;
+        }
+        .hero h1 {
+            font-family: 'Cormorant Garamond', serif;
+            font-size: clamp(4rem, 13vw, 9rem); letter-spacing: 18px; text-transform: uppercase;
+            font-weight: 300; line-height: 0.9; opacity: 0; animation: fadeUp 1.1s ease 0.5s forwards;
+        }
+        .hero h1 em { font-style: italic; color: var(--gold); }
+        .hero-sub {
+            margin-top: 28px; font-size: 0.7rem; letter-spacing: 6px; color: rgba(255,255,255,0.45);
+            text-transform: uppercase; opacity: 0; animation: fadeUp 1s ease 0.7s forwards;
+        }
+        .hero-cta {
+            margin-top: 48px; display: flex; align-items: center; gap: 20px;
+            opacity: 0; animation: fadeUp 1s ease 0.9s forwards;
+        }
+        @keyframes fadeUp { from { opacity: 0; transform: translateY(24px); } to { opacity: 1; transform: translateY(0); } }
+
+        .btn-outline {
+            padding: 14px 36px; border: 1px solid rgba(255,255,255,0.3); color: white;
+            text-transform: uppercase; letter-spacing: 3px; font-size: 0.7rem;
+            background: transparent; cursor: pointer; transition: all 0.4s; text-decoration: none;
+        }
+        .btn-outline:hover { border-color: var(--gold); color: var(--gold); }
+        .btn-gold {
+            padding: 14px 36px; background: var(--gold); color: black;
+            text-transform: uppercase; letter-spacing: 3px; font-size: 0.7rem;
+            border: none; cursor: pointer; font-weight: 500; text-decoration: none; transition: background 0.3s;
+        }
+        .btn-gold:hover { background: var(--gold-light); }
+
+        .scroll-indicator {
+            position: absolute; bottom: 40px; left: 50%; transform: translateX(-50%);
+            display: flex; flex-direction: column; align-items: center; gap: 8px;
+            opacity: 0; animation: fadeUp 1s ease 1.2s forwards;
+        }
+        .scroll-indicator span { font-size: 0.6rem; letter-spacing: 4px; color: rgba(255,255,255,0.4); }
+        .scroll-line { width: 1px; height: 50px; background: linear-gradient(to bottom, var(--gold), transparent); animation: scrollPulse 2s ease infinite; }
+        @keyframes scrollPulse { 0%,100% { opacity: 0.3; } 50% { opacity: 1; } }
+
+        /* ═══════════════════════════════════════
+           MARQUEE
+        ═══════════════════════════════════════ */
+        .marquee-wrapper { padding: 22px 0; background: var(--gold); overflow: hidden; display: flex; white-space: nowrap; }
+        .marquee-track { display: flex; gap: 0; animation: marqueeScroll 28s linear infinite; will-change: transform; }
+        .marquee-track span { font-size: 0.7rem; letter-spacing: 5px; text-transform: uppercase; color: black; padding: 0 30px; flex-shrink: 0; font-weight: 500; }
+        .marquee-track span.sep { color: rgba(0,0,0,0.35); }
+        @keyframes marqueeScroll { from { transform: translateX(0); } to { transform: translateX(-50%); } }
+
+        /* ═══════════════════════════════════════
+           SHARED SECTION STYLES
+        ═══════════════════════════════════════ */
+        .section-label { font-size: 0.6rem; letter-spacing: 6px; text-transform: uppercase; color: var(--gold); margin-bottom: 16px; display: block; }
+        .reveal { opacity: 0; transform: translateY(40px); transition: opacity 0.9s ease, transform 0.9s ease; }
+        .reveal.visible { opacity: 1; transform: translateY(0); }
+
+        /* ═══════════════════════════════════════
+           STATS STRIP
+        ═══════════════════════════════════════ */
+        .about-strip { display: grid; grid-template-columns: 1fr 1px 1fr 1px 1fr; padding: 80px 8%; background: var(--surface); }
+        .stat-block { padding: 0 48px; text-align: center; }
+        .stat-block:first-child { padding-left: 0; text-align: left; }
+        .stat-block:last-child { padding-right: 0; text-align: right; }
+        .stat-divider { background: rgba(255,255,255,0.07); }
+        .stat-num { font-family: 'Cormorant Garamond', serif; font-size: clamp(2.5rem, 5vw, 4rem); font-weight: 300; color: var(--gold); line-height: 1; margin-bottom: 10px; }
+        .stat-label { font-size: 0.65rem; letter-spacing: 4px; color: rgba(255,255,255,0.4); text-transform: uppercase; }
+
+        /* ═══════════════════════════════════════
+           BOUTIQUE
+        ═══════════════════════════════════════ */
+        .store-section { padding: 120px 8%; background: linear-gradient(180deg, var(--ink) 0%, #080808 100%); }
+        .store-section .section-title { margin-bottom: 80px; }
+        .section-title h2 { font-family: 'Cormorant Garamond', serif; font-size: clamp(2.5rem, 6vw, 4.5rem); font-weight: 300; letter-spacing: 4px; color: white; }
+        .section-title h2 em { color: var(--gold); font-style: italic; }
+        .divider { width: 50px; height: 1px; background: var(--gold); margin: 20px 0; }
+
+        .product-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(340px, 1fr)); gap: 2px; }
+
+        .product-card { background: var(--card-bg); border: 1px solid rgba(255,255,255,0.04); position: relative; overflow: hidden; transition: border-color 0.5s; transform-style: preserve-3d; perspective: 800px; }
+        .product-card:hover { border-color: rgba(197,160,89,0.4); }
+        .card-inner { padding: 0; position: relative; transition: transform 0.6s cubic-bezier(0.2,1,0.2,1); transform-style: preserve-3d; }
+        .product-card .img-wrap { position: relative; overflow: hidden; height: 400px; }
+        .product-card .img-wrap img { width: 100%; height: 100%; object-fit: cover; transition: transform 0.8s cubic-bezier(0.2,1,0.2,1), filter 0.8s; filter: brightness(0.85) saturate(0.8); }
+        .product-card:hover .img-wrap img { transform: scale(1.07); filter: brightness(1) saturate(1); }
+        .card-shimmer { position: absolute; inset: 0; opacity: 0; background: linear-gradient(135deg, transparent 40%, rgba(197,160,89,0.08) 50%, transparent 60%); transform: translateX(-100%); transition: opacity 0.3s; }
+        .product-card:hover .card-shimmer { opacity: 1; animation: shimmerSlide 0.8s ease forwards; }
+        @keyframes shimmerSlide { to { transform: translateX(200%); } }
+        .card-tag { position: absolute; top: 20px; left: 20px; background: var(--gold); color: black; font-size: 0.6rem; letter-spacing: 3px; text-transform: uppercase; padding: 6px 12px; font-weight: 500; }
+        .card-body { padding: 28px 30px 36px; }
+        .card-body h3 { font-family: 'Cormorant Garamond', serif; font-size: 1.6rem; font-weight: 400; margin-bottom: 6px; }
+        .card-spec { font-size: 0.65rem; letter-spacing: 3px; color: rgba(255,255,255,0.3); text-transform: uppercase; margin-bottom: 20px; }
+        .price { font-family: 'Cormorant Garamond', serif; font-size: 2rem; color: var(--gold); font-weight: 300; margin-bottom: 24px; }
+        .price span { font-size: 0.9rem; color: rgba(255,255,255,0.35); font-family: 'Inter'; font-weight: 200; }
+
+        .purchase-btn { width: 100%; padding: 16px; background: transparent; border: 1px solid rgba(255,255,255,0.15); color: white; text-transform: uppercase; letter-spacing: 4px; cursor: pointer; font-size: 0.7rem; font-family: 'Inter'; transition: all 0.4s; position: relative; overflow: hidden; }
+        .purchase-btn::before { content: ''; position: absolute; inset: 0; background: var(--gold); transform: translateX(-101%); transition: transform 0.4s cubic-bezier(0.4,0,0.2,1); }
+        .purchase-btn:hover::before { transform: translateX(0); }
+        .purchase-btn:hover { color: black; border-color: var(--gold); }
+        .purchase-btn span { position: relative; z-index: 1; }
+
+        /* ═══════════════════════════════════════
+           WORKSHOP
+        ═══════════════════════════════════════ */
+        .workshop-section { padding: 120px 8%; background: #000; display: grid; grid-template-columns: 1fr 1fr; gap: 80px; align-items: center; }
+        .workshop-media { position: relative; }
+        .workshop-media::before { content: ''; position: absolute; top: -20px; left: -20px; right: 20px; bottom: 20px; border: 1px solid rgba(197,160,89,0.2); z-index: 0; transition: transform 0.6s ease; }
+        .workshop-section:hover .workshop-media::before { transform: translate(6px,6px); }
+        .workshop-media img { width: 100%; aspect-ratio: 4/5; object-fit: cover; position: relative; z-index: 1; filter: brightness(0.9) saturate(0.7); transition: filter 0.6s; }
+        .workshop-section:hover .workshop-media img { filter: brightness(1) saturate(1); }
+        .workshop-content h2 { font-family: 'Cormorant Garamond', serif; font-size: clamp(2.5rem, 5vw, 4rem); font-weight: 300; line-height: 1.1; margin-bottom: 24px; }
+        .workshop-content p { font-size: 0.85rem; color: rgba(255,255,255,0.5); line-height: 1.9; margin-bottom: 40px; font-weight: 300; }
+        .workshop-points { list-style: none; margin-bottom: 40px; }
+        .workshop-points li { font-size: 0.7rem; letter-spacing: 3px; text-transform: uppercase; color: rgba(255,255,255,0.35); padding: 14px 0; border-bottom: 1px solid rgba(255,255,255,0.06); display: flex; align-items: center; gap: 16px; }
+        .workshop-points li::before { content: ''; width: 24px; height: 1px; background: var(--gold); flex-shrink: 0; }
+
+        /* ═══════════════════════════════════════
+           PROCESS
+        ═══════════════════════════════════════ */
+        .process-section { padding: 120px 8%; background: var(--surface); overflow: hidden; }
+        .process-grid { display: grid; grid-template-columns: repeat(4,1fr); gap: 1px; background: rgba(255,255,255,0.05); margin-top: 80px; }
+        .process-step { background: var(--surface); padding: 48px 36px; position: relative; overflow: hidden; transition: background 0.4s; }
+        .process-step:hover { background: rgba(197,160,89,0.04); }
+        .step-num { font-family: 'Cormorant Garamond', serif; font-size: 5rem; font-weight: 300; color: rgba(197,160,89,0.08); line-height: 1; margin-bottom: 24px; transition: color 0.4s; }
+        .process-step:hover .step-num { color: rgba(197,160,89,0.2); }
+        .step-title { font-family: 'Cormorant Garamond', serif; font-size: 1.4rem; font-weight: 400; margin-bottom: 14px; color: white; }
+        .step-desc { font-size: 0.78rem; color: rgba(255,255,255,0.35); line-height: 1.8; font-weight: 300; }
+
+        /* ═══════════════════════════════════════
+           INSTAGRAM
+        ═══════════════════════════════════════ */
+        .instagram-section { padding: 100px 8%; background: #000; }
+
+        /* ═══════════════════════════════════════
+           CONTACT & FOOTER
+        ═══════════════════════════════════════ */
+        .contact-strip { padding: 100px 8%; background: linear-gradient(135deg,#0a0a0a,#080808); display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 48px; border-top: 1px solid rgba(197,160,89,0.1); }
+        .contact-strip h2 { font-family: 'Cormorant Garamond', serif; font-size: clamp(2rem,5vw,3.5rem); font-weight: 300; }
+        .contact-strip h2 em { color: var(--gold); font-style: italic; }
+        .contact-links { display: flex; gap: 24px; align-items: center; }
+        .contact-link { display: flex; align-items: center; gap: 12px; color: rgba(255,255,255,0.6); font-size: 0.75rem; letter-spacing: 2px; text-decoration: none; text-transform: uppercase; transition: color 0.3s; }
+        .contact-link i { color: var(--gold); }
+        .contact-link:hover { color: white; }
+        footer { padding: 60px 8%; background: #000; display: flex; align-items: center; justify-content: space-between; border-top: 1px solid rgba(255,255,255,0.05); flex-wrap: wrap; gap: 24px; }
+        footer p { font-size: 0.65rem; letter-spacing: 2px; color: rgba(255,255,255,0.2); }
+
+        /* ═══════════════════════════════════════
+           CHECKOUT
+        ═══════════════════════════════════════ */
+        #purchaseOverlay { display: none; position: fixed; inset: 0; z-index: 9999; background: rgba(0,0,0,0.9); backdrop-filter: blur(20px); justify-content: center; align-items: center; }
+        .checkout-window { background: #0d0d0d; border: 1px solid rgba(197,160,89,0.3); padding: 48px; width: 90%; max-width: 520px; position: relative; animation: checkoutIn 0.5s cubic-bezier(0.2,1,0.2,1); }
+        @keyframes checkoutIn { from { opacity:0; transform:scale(0.95) translateY(20px); } to { opacity:1; transform:none; } }
+        .checkout-close { position: absolute; right: 24px; top: 16px; color: rgba(255,255,255,0.3); cursor: pointer; font-size: 22px; transition: color 0.3s; border: none; background: none; }
+        .checkout-close:hover { color: var(--gold); }
+        .field-label { font-size: 0.6rem; letter-spacing: 4px; color: rgba(255,255,255,0.3); text-transform: uppercase; margin-bottom: 8px; display: block; margin-top: 16px; }
+        .checkout-window input, .checkout-window textarea { width: 100%; background: rgba(255,255,255,0.04); border: 1px solid rgba(255,255,255,0.08); padding: 14px 16px; color: white; font-family: 'Inter'; font-size: 0.85rem; transition: border-color 0.3s; outline: none; }
+        .checkout-window input:focus, .checkout-window textarea:focus { border-color: var(--gold); }
+        .checkout-window textarea { height: 80px; resize: none; }
+        .payment-options { display: flex; flex-direction: column; gap: 12px; margin-top: 8px; }
+        .payment-label { display: flex; align-items: center; gap: 14px; cursor: pointer; font-size: 0.75rem; color: rgba(255,255,255,0.6); letter-spacing: 1px; padding: 12px 16px; border: 1px solid rgba(255,255,255,0.06); transition: all 0.3s; }
+        .payment-label:has(input:checked) { border-color: rgba(197,160,89,0.4); color: white; background: rgba(197,160,89,0.05); }
+        .payment-label input[type="radio"] { accent-color: var(--gold); }
+        #cardFields { display: grid; gap: 10px; margin-top: 10px; }
+        .card-row { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+        .cta-btn-checkout { width: 100%; padding: 18px; background: var(--gold); color: black; border: none; font-weight: 600; text-transform: uppercase; letter-spacing: 3px; cursor: pointer; font-size: 0.75rem; margin-top: 28px; transition: background 0.3s; font-family: 'Inter'; }
+        .cta-btn-checkout:hover { background: var(--gold-light); }
+
+        /* ═══════════════════════════════════════
+           RESPONSIVE — TABLET
+        ═══════════════════════════════════════ */
+        @media (max-width: 900px) {
+            nav { padding: 20px 5%; }
+            .nav-links a { margin-left: 20px; font-size: 0.6rem; }
+            .workshop-section { grid-template-columns: 1fr; gap: 48px; padding: 80px 6%; }
+            .process-grid { grid-template-columns: repeat(2,1fr); }
+            .about-strip { grid-template-columns: 1fr; gap: 40px; padding: 60px 6%; }
+            .stat-divider { display: none; }
+            .stat-block { padding: 0; text-align: left; }
+            .contact-strip { flex-direction: column; align-items: flex-start; padding: 80px 6%; }
+            .store-section { padding: 80px 6%; }
+            .process-section { padding: 80px 6%; }
+            .instagram-section { padding: 80px 6%; }
+        }
+
+        /* ═══════════════════════════════════════
+           RESPONSIVE — MOBILE
+        ═══════════════════════════════════════ */
+        @media (max-width: 600px) {
+            /* Nav */
+            nav { padding: 18px 5%; }
+            .nav-links { display: none; }
+
+            /* Hero */
+            .hero { padding: 0 6%; }
+            .hero h1 { font-size: 3.5rem; letter-spacing: 6px; }
+            .hero-eyebrow { font-size: 0.55rem; letter-spacing: 4px; }
+            .hero-sub { font-size: 0.55rem; letter-spacing: 3px; margin-top: 16px; }
+            .hero-cta { flex-direction: column; gap: 12px; margin-top: 32px; width: 100%; }
+            .btn-gold, .btn-outline { width: 100%; text-align: center; padding: 14px 20px; }
+            .hero-ring { width: 260px; height: 260px; }
+
+            /* Frame-scrub intro */
+            .frame-scrub { height: 300vh; }
+            .scrub-logo { font-size: 2.8rem; letter-spacing: 10px; }
+            .scrub-eyebrow { font-size: 0.4rem; letter-spacing: 5px; }
+            .scrub-subtitle { font-size: 0.4rem; letter-spacing: 4px; }
+            .scrub-stamp, .scrub-stamp-r { display: none; }
+            .hud-corner { width: 18px; height: 18px; }
+
+            /* Marquee */
+            .marquee-track span { font-size: 0.6rem; padding: 0 18px; }
+
+            /* Stats */
+            .about-strip { padding: 50px 6%; gap: 32px; }
+            .stat-num { font-size: 2.5rem; }
+            .stat-label { font-size: 0.58rem; }
+
+            /* Boutique */
+            .store-section { padding: 70px 5%; }
+            .section-title h2 { font-size: 2.2rem; letter-spacing: 2px; }
+            .section-label { font-size: 0.55rem; }
+            .product-grid { grid-template-columns: 1fr; gap: 24px; }
+            .product-card .img-wrap { height: 280px; }
+            .card-body { padding: 20px; }
+            .card-body h3 { font-size: 1.3rem; }
+            .price { font-size: 1.6rem; }
+            .purchase-btn { font-size: 0.65rem; letter-spacing: 2px; padding: 14px; }
+
+            /* Workshop */
+            .workshop-section { padding: 70px 5%; gap: 36px; }
+            .workshop-media::before { display: none; }
+            .workshop-content h2 { font-size: 2rem; }
+            .workshop-content p { font-size: 0.8rem; }
+            .workshop-points li { font-size: 0.62rem; letter-spacing: 2px; padding: 12px 0; }
+
+            /* Process */
+            .process-section { padding: 70px 5%; }
+            .process-grid { grid-template-columns: 1fr; }
+            .process-step { padding: 32px 24px; }
+            .step-num { font-size: 3.5rem; }
+            .step-title { font-size: 1.2rem; }
+            .step-desc { font-size: 0.74rem; }
+
+            /* Instagram */
+            .instagram-section { padding: 70px 5%; }
+
+            /* Contact */
+            .contact-strip { padding: 70px 5%; gap: 32px; }
+            .contact-strip h2 { font-size: 1.8rem; }
+            .contact-links { flex-direction: column; gap: 16px; }
+
+            /* Footer */
+            footer { padding: 40px 5%; flex-direction: column; align-items: flex-start; gap: 12px; }
+
+            /* Checkout */
+            .checkout-window { padding: 30px 20px; }
+            .card-row { grid-template-columns: 1fr; }
+        }
+
+        @media (prefers-reduced-motion: reduce) {
+            *, *::before, *::after { animation-duration: 0.01ms !important; transition-duration: 0.01ms !important; }
+        }
+    </style>
+</head>
+<body>
+
+    <!-- ═══════════════ SCROLL-DRIVEN FRAME SEQUENCE INTRO ═══════════════ -->
+    <section class="frame-scrub" id="frameScrub">
+        <div class="frame-scrub-sticky">
+            <canvas id="scrubCanvas"></canvas>
+            <div class="scrub-grain"></div>
+            <div class="scrub-vignette"></div>
+            <div class="scrub-hud" id="scrubHud">
+                <div class="hud-corner tl"></div>
+                <div class="hud-corner tr"></div>
+                <div class="hud-corner bl"></div>
+                <div class="hud-corner br"></div>
+            </div>
+            <div class="scrub-stamp">Cairo · Egypt · Est. 2023</div>
+            <div class="scrub-stamp-r">NH35 · NH36 · BGW9</div>
+            <div class="scrub-titles" id="scrubTitles">
+                <p class="scrub-eyebrow">Expertly Modified Seiko Horology</p>
+                <h1 class="scrub-logo">MO MODS</h1>
+                <div class="scrub-rule"></div>
+                <p class="scrub-subtitle">Custom Seiko Modifications · Cairo</p>
+            </div>
+            <div class="scrub-progress" id="scrubProgress">
+                <div class="scrub-progress-track"><div class="scrub-progress-fill" id="scrubProgressFill"></div></div>
+                <span>Scroll</span>
+            </div>
+        </div>
+    </section>
+
+    <!-- CHECKOUT OVERLAY -->
+    <div id="purchaseOverlay">
+        <div class="checkout-window">
+            <button class="checkout-close" onclick="closePurchase()">&#215;</button>
+            <span class="section-label">Secure Order</span>
+            <h2 id="displayItem" style="font-family:'Cormorant Garamond',serif;font-size:1.8rem;font-weight:300;color:white;margin-bottom:4px;"></h2>
+            <p id="displayPrice" style="color:var(--gold);font-family:'Cormorant Garamond',serif;font-size:1.4rem;font-weight:300;margin-bottom:24px;"></p>
+            <label class="field-label">Full Name</label>
+            <input type="text" id="buyerName" placeholder="Your full name">
+            <label class="field-label">WhatsApp Number</label>
+            <input type="text" id="buyerPhone" placeholder="+20 xxx xxx xxxx">
+            <label class="field-label">Shipping Address</label>
+            <textarea id="buyerAddress" placeholder="Delivery address"></textarea>
+            <label class="field-label">Payment Method</label>
+            <div class="payment-options">
+                <label class="payment-label"><input type="radio" name="payType" value="Credit" checked> Credit Card — Pay Online</label>
+                <label class="payment-label"><input type="radio" name="payType" value="InstaPay"> InstaPay — via Instagram</label>
+                <label class="payment-label"><input type="radio" name="payType" value="Cash"> Cash on Delivery</label>
+            </div>
+            <div id="cardFields">
+                <input type="text" placeholder="Card Number">
+                <div class="card-row">
+                    <input type="text" placeholder="MM / YY">
+                    <input type="text" placeholder="CVV">
+                </div>
+            </div>
+            <button class="cta-btn-checkout" onclick="submitOrder()">Confirm Purchase</button>
+        </div>
+    </div>
+
+    <!-- NAV -->
+    <nav id="mainNav">
+        <a href="#" class="logo">MO MODS</a>
+        <div class="nav-links">
+            <a href="#">Home</a>
+            <a href="#boutique">Boutique</a>
+            <a href="#workshop">Workshop</a>
+            <a href="#gallery">Studio Journal</a>
+        </div>
+    </nav>
+
+    <!-- HERO -->
+    <header class="hero">
+        <div class="hero-bg"></div>
+        <div class="hero-ring"></div>
+        <div class="lume-particles" id="lumeParticles"></div>
+        <div class="hero-content">
+            <p class="hero-eyebrow">Expertly Modified Seiko Horology · Cairo</p>
+            <h1>Mo<br><em>Mods</em></h1>
+            <p class="hero-sub">Est. 2023 &nbsp;—&nbsp; Custom Seiko Modifications</p>
+            <div class="hero-cta">
+                <a href="#boutique" class="btn-gold">View Boutique</a>
+                <a href="#workshop" class="btn-outline">Custom Order</a>
+            </div>
+        </div>
+        <div class="scroll-indicator">
+            <div class="scroll-line"></div>
+            <span>Scroll</span>
+        </div>
+    </header>
+
+    <!-- MARQUEE -->
+    <div class="marquee-wrapper">
+        <div class="marquee-track" id="marqueeTrack"></div>
+    </div>
+
+    <!-- STATS -->
+    <div class="about-strip">
+        <div class="stat-block reveal">
+            <div class="stat-num" id="count1">0</div>
+            <div class="stat-label">Watches Built</div>
+        </div>
+        <div class="stat-divider"></div>
+        <div class="stat-block reveal" style="transition-delay:0.15s">
+            <div class="stat-num" id="count2">0</div>
+            <div class="stat-label">Happy Clients</div>
+        </div>
+        <div class="stat-divider"></div>
+        <div class="stat-block reveal" style="transition-delay:0.3s">
+            <div class="stat-num" id="count3">0</div>
+            <div class="stat-label">Years of Craft</div>
+        </div>
+    </div>
+
+    <!-- BOUTIQUE -->
+    <section class="store-section" id="boutique">
+        <div class="section-title reveal">
+            <span class="section-label">Current Inventory</span>
+            <h2>The <em>Boutique</em></h2>
+            <div class="divider"></div>
+            <p style="font-size:0.8rem;color:rgba(255,255,255,0.35);max-width:480px;line-height:1.9;font-weight:300;margin-top:16px;">
+                Each piece is a unique build. Once it's gone, it's gone. All watches come with a 6-month movement guarantee.
+            </p>
+        </div>
+        <div class="product-grid">
+            <div class="product-card reveal">
+                <div class="card-inner">
+                    <div class="img-wrap">
+                        <img src="https://images.unsplash.com/photo-1614164185128-e4ec99c436d7?auto=format&fit=crop&q=80" alt="The Explorer I Mod">
+                        <div class="card-shimmer"></div>
+                        <div class="card-tag">In Stock</div>
+                    </div>
+                    <div class="card-body">
+                        <h3>The Explorer I Mod</h3>
+                        <div class="card-spec">NH35 · Gilt Dial · Ceramic Bezel</div>
+                        <div class="price">8,500 <span>EGP</span></div>
+                        <button class="purchase-btn" onclick="openPurchase('The Explorer I Mod','8,500 EGP')"><span>Purchase This Piece</span></button>
+                    </div>
+                </div>
+            </div>
+            <div class="product-card reveal" style="transition-delay:0.15s">
+                <div class="card-inner">
+                    <div class="img-wrap">
+                        <img src="https://images.unsplash.com/photo-1542496658-e33a6d0d50f6?auto=format&fit=crop&q=80" alt="Heritage Hulk Sub">
+                        <div class="card-shimmer"></div>
+                        <div class="card-tag" style="background:#0d3b24;color:#00ff88;">Last One</div>
+                    </div>
+                    <div class="card-body">
+                        <h3>Heritage "Hulk" Sub</h3>
+                        <div class="card-spec">NH36 · Green Dial · BGW9 Lume</div>
+                        <div class="price">9,200 <span>EGP</span></div>
+                        <button class="purchase-btn" onclick="openPurchase('Heritage Hulk Sub','9,200 EGP')"><span>Purchase This Piece</span></button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- WORKSHOP -->
+    <section class="workshop-section" id="workshop">
+        <div class="workshop-media reveal">
+            <img src="https://images.unsplash.com/photo-1585123334904-845d60e97b29?auto=format&fit=crop&q=80" alt="Watch workbench">
+        </div>
+        <div class="workshop-content reveal" style="transition-delay:0.2s">
+            <span class="section-label">Bespoke Service</span>
+            <h2>Your Watch,<br>Our <em style="color:var(--gold)">Hands</em></h2>
+            <p>Every custom build begins with a consultation. You choose the base movement, dial, hands, and case. We handle the rest — precision assembly, timing regulation, and water resistance testing.</p>
+            <ul class="workshop-points">
+                <li>Dial & Hands Swap</li>
+                <li>Movement Servicing & Regulation</li>
+                <li>Case & Bracelet Modification</li>
+                <li>Full Custom Build — 4–6 Weeks</li>
+            </ul>
+            <a href="https://www.instagram.com/momods_eg/" class="btn-gold" style="display:inline-block">Start a Conversation</a>
+        </div>
+    </section>
+
+    <!-- PROCESS -->
+    <section class="process-section">
+        <div class="section-title reveal">
+            <span class="section-label">How It Works</span>
+            <h2>The <em style="color:var(--gold);font-style:italic">Process</em></h2>
+        </div>
+        <div class="process-grid">
+            <div class="process-step reveal"><div class="step-num">01</div><div class="step-title">Consultation</div><div class="step-desc">Reach us on Instagram or WhatsApp. We discuss your vision, budget, and timeline.</div></div>
+            <div class="process-step reveal" style="transition-delay:0.1s"><div class="step-num">02</div><div class="step-title">Design</div><div class="step-desc">We source all parts, present options, and lock in the final specification with you.</div></div>
+            <div class="process-step reveal" style="transition-delay:0.2s"><div class="step-num">03</div><div class="step-title">Assembly</div><div class="step-desc">Hand-built in our Cairo workshop. Every movement timed. Every gasket sealed.</div></div>
+            <div class="process-step reveal" style="transition-delay:0.3s"><div class="step-num">04</div><div class="step-title">Delivery</div><div class="step-desc">Shipped nationwide or collected in Cairo. With a certificate and 6-month guarantee.</div></div>
+        </div>
+    </section>
+
+    <!-- INSTAGRAM -->
+    <section class="instagram-section" id="gallery">
+        <div class="section-title reveal">
+            <span class="section-label">@momods_eg</span>
+            <h2>Studio <em style="color:var(--gold);font-style:italic">Journal</em></h2>
+            <div class="divider"></div>
+        </div>
+        <div class="elfsight-app-8b570693-1967-4f28-9fe1-af7a9643b182" data-elfsight-app-lazy></div>
+    </section>
+
+    <!-- CONTACT -->
+    <div class="contact-strip reveal">
+        <div>
+            <span class="section-label">Get In Touch</span>
+            <h2>Let's Build<br>Something <em>Special</em></h2>
+        </div>
+        <div class="contact-links">
+            <a href="https://www.instagram.com/momods_eg/" class="contact-link" target="_blank"><i class="fab fa-instagram"></i> @momods_eg</a>
+            <a href="https://wa.me/201000000000" class="contact-link" target="_blank"><i class="fab fa-whatsapp"></i> WhatsApp</a>
+        </div>
+    </div>
+
+    <!-- FOOTER -->
+    <footer>
+        <a href="#" class="logo" style="font-size:1.2rem;letter-spacing:8px;">MO MODS</a>
+        <p>© 2026 MO MODS Egypt. All rights reserved.</p>
+        <p style="font-size:0.6rem;letter-spacing:3px;">Cairo · EST. 2023</p>
+    </footer>
+
+    <script>
+    /* ═══════════════════════════════════════════════════════
+       SCROLL-DRIVEN FRAME SEQUENCE ANIMATION
+       — 151 frames extracted from the source video at 30fps
+         (ffmpeg: fps=30, scaled to 960px wide, ~11MB total)
+       — Canvas is position:sticky and fills the viewport for
+         the full height of the .frame-scrub wrapper (400vh)
+       — Scroll position within the wrapper is mapped 0→1 and
+         used to pick + draw the current frame (cover-fit)
+       — Title card and HUD fade in/out based on scroll
+         progress instead of a fixed setTimeout timeline
+    ═══════════════════════════════════════════════════════ */
+    (function() {
+        const FRAME_COUNT = 151;
+        const FRAME_PATH  = i => `frames/frame_${String(i).padStart(4,'0')}.jpg`;
+
+        const wrapper   = document.getElementById('frameScrub');
+        const canvas    = document.getElementById('scrubCanvas');
+        const ctx       = canvas.getContext('2d');
+        const titles    = document.getElementById('scrubTitles');
+        const hud       = document.getElementById('scrubHud');
+        const progress  = document.getElementById('scrubProgress');
+        const progressFill = document.getElementById('scrubProgressFill');
+
+        const reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+        /* ── Preload frames ── */
+        const images = new Array(FRAME_COUNT);
+        let loadedCount = 0;
+        let firstFrameReady = false;
+
+        function preload() {
+            for (let i = 1; i <= FRAME_COUNT; i++) {
+                const img = new Image();
+                img.src = FRAME_PATH(i);
+                img.onload = () => {
+                    loadedCount++;
+                    if (i === 1 && !firstFrameReady) {
+                        firstFrameReady = true;
+                        drawFrame(1);
+                    }
+                };
+                images[i - 1] = img;
+            }
+        }
+        preload();
+
+        /* ── Canvas sizing (retina-aware) ── */
+        function resizeCanvas() {
+            const dpr = Math.min(window.devicePixelRatio || 1, 2);
+            canvas.width  = window.innerWidth * dpr;
+            canvas.height = window.innerHeight * dpr;
+            canvas.style.width  = window.innerWidth + 'px';
+            canvas.style.height = window.innerHeight + 'px';
+            ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+        }
+        resizeCanvas();
+        window.addEventListener('resize', resizeCanvas);
+
+        /* ── Draw a frame with contain-fit (whole frame visible, watch reads smaller) ──
+           WATCH_SCALE < 1 shrinks it further within the safe area so the
+           background/edges of the shot are visible around it. Raise toward
+           1 to make the watch bigger again, lower to shrink it more. */
+        const WATCH_SCALE = 0.62;
+        function drawFrame(frameNum) {
+            const img = images[frameNum - 1];
+            if (!img || !img.complete || !img.naturalWidth) return;
+            const cw = window.innerWidth, ch = window.innerHeight;
+            const iw = img.naturalWidth,  ih = img.naturalHeight;
+            const scale = Math.min(cw / iw, ch / ih) * WATCH_SCALE;
+            const dw = iw * scale, dh = ih * scale;
+            const dx = (cw - dw) / 2, dy = (ch - dh) / 2;
+            ctx.clearRect(0, 0, cw, ch);
+            ctx.drawImage(img, dx, dy, dw, dh);
+        }
+
+        /* ── Scroll → progress → frame mapping ── */
+        let ticking = false;
+        let lastFrame = -1;
+
+        function smoothstep(edge0, edge1, x) {
+            const t = Math.min(Math.max((x - edge0) / (edge1 - edge0), 0), 1);
+            return t * t * (3 - 2 * t);
+        }
+
+        function onScrollFrame() {
+            ticking = false;
+
+            const rect = wrapper.getBoundingClientRect();
+            const scrollDist = wrapper.offsetHeight - window.innerHeight;
+            const scrolled = Math.min(Math.max(-rect.top, 0), scrollDist);
+            const p = scrollDist > 0 ? scrolled / scrollDist : 0;
+
+            /* pick the nearest loaded frame */
+            let frameNum = Math.min(FRAME_COUNT, Math.max(1, Math.round(p * (FRAME_COUNT - 1)) + 1));
+            while (frameNum > 1 && (!images[frameNum - 1] || !images[frameNum - 1].complete)) frameNum--;
+
+            if (frameNum !== lastFrame) {
+                drawFrame(frameNum);
+                lastFrame = frameNum;
+            }
+
+            /* title card: fade in early, hold, fade out before section ends */
+            const titleOpacity = smoothstep(0.06, 0.2, p) * (1 - smoothstep(0.72, 0.9, p));
+            titles.style.opacity = titleOpacity;
+            hud.classList.toggle('on', titleOpacity > 0.05);
+
+            /* scroll progress indicator: visible only near the very start */
+            const cueOpacity = 1 - smoothstep(0, 0.08, p);
+            progress.classList.toggle('on', cueOpacity > 0.05 && p < 0.95);
+            progressFill.style.height = (p * 100) + '%';
+        }
+
+        function requestTick() {
+            if (!ticking) {
+                ticking = true;
+                requestAnimationFrame(onScrollFrame);
+            }
+        }
+
+        window.addEventListener('scroll', requestTick, { passive: true });
+        window.addEventListener('resize', () => { resizeCanvas(); requestTick(); });
+
+        /* Reduced motion: skip scrubbing, show a static hero frame instead */
+        if (reducedMotion) {
+            wrapper.style.height = '100vh';
+            const img = new Image();
+            img.src = FRAME_PATH(Math.round(FRAME_COUNT * 0.55));
+            img.onload = () => { images[0] = img; drawFrame(1); };
+            titles.style.opacity = 1;
+            hud.classList.add('on');
+            progress.classList.remove('on');
+        } else {
+            requestTick();
+        }
+    })();
+
+    /* ═══ NAV ═══ */
+    window.addEventListener('scroll', () => {
+        document.getElementById('mainNav').classList.toggle('scrolled', window.scrollY > 80);
+    });
+
+    /* ═══ LUME PARTICLES ═══ */
+    const container = document.getElementById('lumeParticles');
+    for (let i = 0; i < 22; i++) {
+        const d = document.createElement('div');
+        d.className = 'lume-dot';
+        d.style.cssText = `left:${Math.random()*100}%;top:${Math.random()*100}%;--d:${2.5+Math.random()*5}s;animation-delay:${Math.random()*5}s;`;
+        container.appendChild(d);
+    }
+
+    /* ═══ MARQUEE ═══ */
+    const marqueeItems = ['Seiko Modifications','✦','Cairo Egypt','✦','Handbuilt Watches','✦','Custom Order','✦','NH35 · NH36 · 4R36','✦','BGW9 Lume','✦'];
+    const track = document.getElementById('marqueeTrack');
+    [...marqueeItems,...marqueeItems].forEach(t => {
+        const s = document.createElement('span');
+        s.textContent = t;
+        if (t==='✦') s.className='sep';
+        track.appendChild(s);
+    });
+
+    /* ═══ SCROLL REVEAL ═══ */
+    const observer = new IntersectionObserver(entries => {
+        entries.forEach(e => { if (e.isIntersecting) { e.target.classList.add('visible'); observer.unobserve(e.target); } });
+    }, { threshold: 0.12 });
+    document.querySelectorAll('.reveal').forEach(el => observer.observe(el));
+
+    /* ═══ COUNTERS ═══ */
+    const targets = { count1:87, count2:71, count3:3 };
+    const countObs = new IntersectionObserver(entries => {
+        entries.forEach(e => {
+            if (!e.isIntersecting) return;
+            const id = e.target.id, target = targets[id];
+            let cur = 0;
+            const step = Math.ceil(target/50);
+            const timer = setInterval(() => {
+                cur = Math.min(cur+step, target);
+                e.target.textContent = cur + '+';
+                if (cur >= target) clearInterval(timer);
+            }, 35);
+            countObs.unobserve(e.target);
+        });
+    }, { threshold: 0.5 });
+    Object.keys(targets).forEach(id => { const el = document.getElementById(id); if(el) countObs.observe(el); });
+
+    /* ═══ 3D CARD TILT ═══ */
+    document.querySelectorAll('.product-card').forEach(card => {
+        card.addEventListener('mousemove', e => {
+            const r = card.getBoundingClientRect();
+            const rx = ((e.clientY - r.top - r.height/2) / r.height) * -12;
+            const ry = ((e.clientX - r.left - r.width/2) / r.width) * 12;
+            card.querySelector('.card-inner').style.transform = `perspective(800px) rotateX(${rx}deg) rotateY(${ry}deg) scale3d(1.02,1.02,1.02)`;
+        });
+        card.addEventListener('mouseleave', () => {
+            card.querySelector('.card-inner').style.transform = 'perspective(800px) rotateX(0) rotateY(0) scale3d(1,1,1)';
+        });
+    });
+
+    /* ═══ PAYMENT TOGGLE ═══ */
+    document.querySelectorAll('input[name="payType"]').forEach(r => {
+        r.addEventListener('change', () => {
+            document.getElementById('cardFields').style.display = r.value==='Credit' ? 'grid' : 'none';
+        });
+    });
+
+    /* ═══ CHECKOUT ═══ */
+    let currentItem='', currentPrice='';
+    function openPurchase(name, price) {
+        currentItem=name; currentPrice=price;
+        document.getElementById('displayItem').innerText=name;
+        document.getElementById('displayPrice').innerText=price;
+        document.getElementById('purchaseOverlay').style.display='flex';
+        document.body.style.overflow='hidden';
+    }
+    function closePurchase() {
+        document.getElementById('purchaseOverlay').style.display='none';
+        document.body.style.overflow='';
+    }
+    function submitOrder() {
+        const name=document.getElementById('buyerName').value.trim();
+        const phone=document.getElementById('buyerPhone').value.trim();
+        const method=document.querySelector('input[name="payType"]:checked').value;
+        if(!name||!phone){ alert('Please enter your name and phone number.'); return; }
+        const text=`NEW ORDER: ${currentItem} (${currentPrice})\nName: ${name}\nPhone: ${phone}\nPayment: ${method}`;
+        if(method==='InstaPay'){ alert('Transfer to: mo.mods@instapay\nThen send your screenshot on Instagram. Redirecting...'); window.location.href='https://ig.me/m/momods_eg?text='+encodeURIComponent(text); }
+        else if(method==='Credit'){ alert("Card payment gateway coming soon. We'll redirect to Paymob."); }
+        else { window.location.href='https://wa.me/201000000000?text='+encodeURIComponent(text); }
+    }
+    document.getElementById('purchaseOverlay').addEventListener('click', e => { if(e.target===e.currentTarget) closePurchase(); });
+    </script>
+</body>
+</html>
